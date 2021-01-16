@@ -93,3 +93,31 @@ func TestCreateVirtualAccount(t *testing.T) {
 
 	t.Logf("\nSuccess = %+v", response.Payload)
 }
+
+func TestGetVirtualAccountStatusPayment(t *testing.T) {
+
+	briConfig := BRIConfig{
+		ConsumerKey:    "E4Ar8prAnXGKO7S6lPTqJWVcOKZqzN1G",
+		ConsumerSecret: "M8YgS30WASAkbaZU",
+	}
+
+	bri, err := InitBRI(briConfig)
+	if err != nil {
+		t.Errorf("\nError = %+v", err)
+		return
+	}
+
+	reqGetBRIVAStatusPayment := ReqGetBRIVAStatusPayment{
+		InstitutionCode: "J104408",
+		BrivaNo:         77777,
+		CustCode:        "123456789115",
+	}
+
+	response, err := bri.GetVAStatusPayment(reqGetBRIVAStatusPayment)
+	if err != nil {
+		t.Errorf("\nError = %+v", err)
+		return
+	}
+
+	t.Logf("\nSuccess = %+v", response.Payload)
+}
