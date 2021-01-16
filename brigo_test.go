@@ -70,7 +70,8 @@ func TestCreateVirtualAccount(t *testing.T) {
 
 	bri, err := InitBRI(briConfig)
 	if err != nil {
-		t.Errorf("SALAH! = %+v", err)
+		t.Errorf("\nError = %+v", err)
+		return
 	}
 
 	expiredDate := time.Now().AddDate(0, 1, 0).Format("2006-01-02 15:04:05")
@@ -86,8 +87,9 @@ func TestCreateVirtualAccount(t *testing.T) {
 
 	response, err := bri.CreateBRIVA(reqCreateBRIVA)
 	if err != nil {
-		t.Errorf("SALAH! = %+v", err)
+		t.Errorf("\nError = %+v", err)
+		return
 	}
 
-	t.Logf("BERHASIL : %+v", response)
+	t.Logf("\nSuccess = %+v", response)
 }

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -53,6 +54,9 @@ type ReqCreateBRIVA struct {
 	Amount          float64 `json:"amount"`
 	Keterangan      string  `json:"keterangan"`
 	ExpiredDate     string  `json:"expiredDate"`
+}
+
+type ResCreateBRIVA struct {
 }
 
 func InitBRI(config BRIConfig) (briCred *BRICredentials, err error) {
@@ -170,6 +174,12 @@ func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (response map[string]i
 	if err != nil {
 		log.Printf("ERROR Unmarshal %+v", err)
 		return nil, err
+	}
+
+	if status, ok := response["status"].(map[string]interface{}); ok {
+		if errDesc, exists := status["desc"].(string); exists {
+			return nil, errors.New(errDesc)
+		}
 	}
 
 	return response, nil
