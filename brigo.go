@@ -64,13 +64,13 @@ type ResCreateBRIVA struct {
 }
 
 type ResCreateBRIVAData struct {
-	institutionCode string `json:"institutionCode"`
-	brivaNo         string `json:"brivaNo"`
-	custCode        string `json:"custCode"`
-	nama            string `json:"nama"`
-	amount          string `json:"amount"`
-	keterangan      string `json:"keterangan"`
-	expiredDate     string `json:"expiredDate"`
+	InstitutionCode string `json:"institutionCode"`
+	BrivaNo         string `json:"brivaNo"`
+	CustCode        string `json:"custCode"`
+	Nama            string `json:"nama"`
+	Amount          string `json:"amount"`
+	Keterangan      string `json:"keterangan"`
+	ExpiredDate     string `json:"expiredDate"`
 }
 
 type RawResponse struct {
