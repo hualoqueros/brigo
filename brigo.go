@@ -1,6 +1,7 @@
 package brigo
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -12,7 +13,19 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 )
+
+type EndPoint int
+
+const (
+	CreateVaURL EndPoint = iota
+	CreateTokenURL
+)
+
+func (e EndPoint) String() string {
+	return [...]string{"https://sandbox.partner.api.bri.co.id/v1/briva", "https://sandbox.partner.api.bri.co.id/oauth/client_credential/accesstoken?grant_type=client_credentials"}[e]
+}
 
 type BRIConfig struct {
 	ConsumerKey    string `json:"consumer_key"`
@@ -32,15 +45,24 @@ type Payload struct {
 	Body      string `json:"body`
 }
 
-func InitBRI(config BRIConfig) (briCred *BRICredentials, err error) {
+type ReqCreateBRIVA struct {
+	InstitutionCode string  `json:"institutionCode"`
+	BrivaNo         int     `json:"brivaNo"`
+	CustCode        string  `json:"custCode"`
+	Nama            string  `json:"nama"`
+	Amount          float64 `json:"amount"`
+	Keterangan      string  `json:"keterangan"`
+	ExpiredDate     string  `json:"expiredDate"`
+}
 
+func InitBRI(config BRIConfig) (briCred *BRICredentials, err error) {
 	data := url.Values{}
 	data.Set("client_id", config.ConsumerKey)
 	data.Set("client_secret", config.ConsumerSecret)
 
 	// GET TOKEN
 	client := &http.Client{}
-	r, _ := http.NewRequest(http.MethodPost, "https://sandbox.partner.api.bri.co.id/oauth/client_credential/accesstoken?grant_type=client_credentials", strings.NewReader(data.Encode())) // URL-encoded payload
+	r, _ := http.NewRequest(http.MethodPost, CreateTokenURL.String(), strings.NewReader(data.Encode())) // URL-encoded payload
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	r.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 
@@ -68,7 +90,7 @@ func InitBRI(config BRIConfig) (briCred *BRICredentials, err error) {
 	}, nil
 }
 
-func (bg *BRICredentials) CreateSignature(payload Payload) (signature string, err error) {
+func (bg *BRICredentials) CreateSignature(payload Payload) (signature string, timestamp time.Time, err error) {
 
 	secret := bg.Config.ConsumerSecret
 	data := fmt.Sprintf(`path=%s&verb=%s&token=%s&timestamp=%s&body=%s`,
@@ -81,12 +103,74 @@ func (bg *BRICredentials) CreateSignature(payload Payload) (signature string, er
 	// Get result and encode as hexadecimal string
 	signature = ComputeHmac256(data, secret)
 
-	return signature, err
+	return signature, time.Now(), err
 }
 
 func ComputeHmac256(message string, secret string) string {
 	key := []byte(secret)
 	h := hmac.New(sha256.New, key)
 	h.Write([]byte(message))
+
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
+}
+
+func (bg *BRICredentials) ParseEndpoint(method string, endpoint string, bodyRequest interface{}) (payload Payload, err error) {
+	urlComponent, err := url.Parse(endpoint)
+	if err != nil {
+		return
+	}
+
+	body, _ := json.Marshal(bodyRequest)
+	cleanBody, _ := strconv.Unquote(string(body))
+	payload = Payload{
+		Path:      urlComponent.Path,
+		Verb:      "POST",
+		Token:     "Bearer " + bg.Token,
+		Timestamp: time.Now().Format("2006-01-02T15:04:05Z"),
+		Body:      cleanBody,
+	}
+
+	return
+}
+
+func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (response map[string]interface{}, err error) {
+	endpoint := CreateVaURL.String()
+	body, _ := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+
+	payload, err := bg.ParseEndpoint("POST", CreateVaURL.String(), string(body))
+	if err != nil {
+		return nil, err
+	}
+
+	signature, timestamp, err := bg.CreateSignature(payload)
+	buffPayload, _ := json.Marshal(payload)
+
+	client := &http.Client{}
+	r, _ := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(buffPayload)) // URL-encoded payload
+	r.Header.Add("Content-Type", "application/json")
+	r.Header.Add("BRI-Timestamp", timestamp.Format("2006-01-02T15:04:05Z"))
+	r.Header.Add("BRI-Signature", signature)
+
+	resp, err := client.Do(r)
+	if err != nil {
+		log.Printf("ERROR REQUEST %+v", err)
+		return nil, err
+	}
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("ERROR ReadResponse %+v", err)
+		return nil, err
+	}
+
+	err = json.Unmarshal(bodyBytes, &response)
+	if err != nil {
+		log.Printf("ERROR Unmarshal %+v", err)
+		return nil, err
+	}
+
+	return response, nil
 }
