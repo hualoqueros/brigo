@@ -57,6 +57,50 @@ type ReqCreateBRIVA struct {
 }
 
 type ResCreateBRIVA struct {
+	Status              bool               `json:"status"`
+	ResponseDescription string             `json:"responseDescription"`
+	ResponseCode        string             `json:"responseCode"`
+	Data                ResCreateBRIVAData `json:"data"`
+}
+
+type ResCreateBRIVAData struct {
+	institutionCode string `json:"institutionCode"`
+	brivaNo         string `json:"brivaNo"`
+	custCode        string `json:"custCode"`
+	nama            string `json:"nama"`
+	amount          string `json:"amount"`
+	keterangan      string `json:"keterangan"`
+	expiredDate     string `json:"expiredDate"`
+}
+
+type RawResponse struct {
+	Payload interface{}
+}
+
+type ErrorResponse struct {
+	Status ErrorResponseData `json:"status`
+}
+
+type ErrorResponseData struct {
+	Code        string `json:"code"`
+	Description string `json:"desc"`
+}
+
+func (d *RawResponse) UnmarshalJSON(data []byte) error {
+	var resp map[string]interface{}
+
+	if err := json.Unmarshal(data, &resp); err != nil {
+		log.Printf(err.Error(), "<<<< cek errornya")
+		return err
+	}
+
+	if _, ok := resp["status"].(bool); ok {
+		d.Payload = new(ResCreateBRIVAData)
+	} else {
+		d.Payload = new(ErrorResponse)
+	}
+	return json.Unmarshal(data, d.Payload)
+
 }
 
 func InitBRI(config BRIConfig) (briCred *BRICredentials, err error) {
@@ -137,16 +181,16 @@ func (bg *BRICredentials) ParseEndpoint(method string, endpoint string, bodyRequ
 	return
 }
 
-func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (response map[string]interface{}, err error) {
+func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (response RawResponse, err error) {
 	endpoint := CreateVaURL.String()
 	body, _ := json.Marshal(req)
 	if err != nil {
-		return nil, err
+		return RawResponse{}, err
 	}
 
 	payload, err := bg.ParseEndpoint("POST", CreateVaURL.String(), string(body))
 	if err != nil {
-		return nil, err
+		return RawResponse{}, err
 	}
 
 	signature, timestamp, err := bg.CreateSignature(payload)
@@ -161,25 +205,26 @@ func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (response map[string]i
 	resp, err := client.Do(r)
 	if err != nil {
 		log.Printf("ERROR REQUEST %+v", err)
-		return nil, err
+		return RawResponse{}, err
 	}
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("ERROR ReadResponse %+v", err)
-		return nil, err
+		return RawResponse{}, err
 	}
 
 	err = json.Unmarshal(bodyBytes, &response)
 	if err != nil {
 		log.Printf("ERROR Unmarshal %+v", err)
-		return nil, err
+		return RawResponse{}, err
 	}
 
-	if status, ok := response["status"].(map[string]interface{}); ok {
-		if errDesc, exists := status["desc"].(string); exists {
-			return nil, errors.New(errDesc)
-		}
+	switch response.Payload.(type) {
+	case *ErrorResponse:
+		result := response.Payload.(*ErrorResponse)
+		err = errors.New(result.Status.Description)
+		return response, err
 	}
 
 	return response, nil

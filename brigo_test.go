@@ -91,5 +91,5 @@ func TestCreateVirtualAccount(t *testing.T) {
 		return
 	}
 
-	t.Logf("\nSuccess = %+v", response)
+	t.Logf("\nSuccess = %+v", response.Payload)
 }
