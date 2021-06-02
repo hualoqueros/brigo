@@ -1,9 +1,7 @@
 package brigo
 
 import (
-	"encoding/json"
 	"testing"
-	"time"
 )
 
 func TestGetToken(t *testing.T) {
@@ -23,6 +21,7 @@ func TestGetToken(t *testing.T) {
 
 }
 
+/**
 func TestCreateSignature(t *testing.T) {
 	endpoint := "https://sandbox.partner.api.bri.co.id/v1/briva"
 
@@ -35,6 +34,7 @@ func TestCreateSignature(t *testing.T) {
 	if err != nil {
 		t.Errorf("\nSALAH! = %+v", err)
 	}
+	t.Logf("\nToken = %+v", bri.Token)
 
 	expiredDate := time.Now().AddDate(0, 1, 0).Format("2006-01-02 15:04:05")
 	bodyStruct := ReqCreateBRIVA{
@@ -48,7 +48,8 @@ func TestCreateSignature(t *testing.T) {
 	}
 
 	body, _ := json.Marshal(bodyStruct)
-	payload, err := bri.ParseEndpoint("POST", endpoint, string(body))
+	timeNow := time.Now()
+	payload, err := bri.ParseEndpoint("POST", endpoint, string(body), timeNow)
 	if err != nil {
 		t.Errorf("\nSALAH! = %+v", err)
 	}
@@ -60,6 +61,7 @@ func TestCreateSignature(t *testing.T) {
 
 	t.Logf("\nBERHASIL : %+v", signature)
 }
+**/
 
 func TestCreateVirtualAccount(t *testing.T) {
 
@@ -74,7 +76,7 @@ func TestCreateVirtualAccount(t *testing.T) {
 		return
 	}
 
-	expiredDate := time.Now().AddDate(0, 1, 0).Format("2006-01-02 15:04:05")
+	// expiredDate := time.Now().AddDate(0, 1, 0).Format("2006-01-02 15:04:05")
 	reqCreateBRIVA := ReqCreateBRIVA{
 		InstitutionCode: "J104408",
 		BrivaNo:         77777,
@@ -82,7 +84,8 @@ func TestCreateVirtualAccount(t *testing.T) {
 		Nama:            "Sabrina",
 		Amount:          100000,
 		Keterangan:      "BRIVA Testing",
-		ExpiredDate:     expiredDate,
+		// ExpiredDate:     expiredDate,
+		ExpiredDate: "2021-07-02 17:29:04",
 	}
 
 	response, err := bri.CreateBRIVA(reqCreateBRIVA)
@@ -94,6 +97,7 @@ func TestCreateVirtualAccount(t *testing.T) {
 	t.Logf("\nSuccess = %+v", response.Payload)
 }
 
+/**
 func TestGetVirtualAccountStatusPayment(t *testing.T) {
 
 	briConfig := BRIConfig{
@@ -121,3 +125,4 @@ func TestGetVirtualAccountStatusPayment(t *testing.T) {
 
 	t.Logf("\nSuccess = %+v", response.Payload)
 }
+**/
