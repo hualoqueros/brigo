@@ -307,7 +307,7 @@ func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (result CreateBRIVARes
 func (bg *BRICredentials) GetVAStatusPayment(req ReqGetBRIVAStatusPayment) (response RawResponse, err error) {
 
 	endpoint := fmt.Sprintf(GetVAStatusPaymentURL.String(), req.InstitutionCode, req.BrivaNo, req.CustCode)
-	log.Printf("\nendpoint => %+v", endpoint)
+	// log.Printf("\nendpoint => %+v", endpoint)
 	timeNow := time.Now().UTC()
 	payload, err := bg.ParseEndpoint("GET", endpoint, nil, timeNow)
 	if err != nil {
@@ -328,8 +328,8 @@ func (bg *BRICredentials) GetVAStatusPayment(req ReqGetBRIVAStatusPayment) (resp
 	bearerToken := "Bearer " + bg.Token
 	r.Header.Set("Authorization", bearerToken)
 
-	command, _ := http2curl.GetCurlCommand(r)
-	fmt.Printf("CURL => %+v", command)
+	// command, _ := http2curl.GetCurlCommand(r)
+	// fmt.Printf("CURL => %+v", command)
 
 	resp, err := client.Do(r)
 	if err != nil {
