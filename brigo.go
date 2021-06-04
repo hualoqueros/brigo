@@ -228,7 +228,6 @@ func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (result CreateBRIVARes
 		return CreateBRIVAResponse{}, err
 	}
 	timeNow := time.Now().UTC()
-	log.Printf("\ntimeNow => %+v", timeNow)
 
 	payload, err := bg.ParseEndpoint("POST", endpoint, string(body), timeNow)
 	if err != nil {
@@ -238,11 +237,13 @@ func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (result CreateBRIVARes
 	if err != nil {
 		log.Printf("ERROR CreateSignature %+v", err)
 	}
-	bd := []byte(payload.Body)
-	buffPayload := bytes.NewReader(bd)
+	buffPayload, err := json.Marshal(payload)
+	if err != nil {
+		log.Printf("ERROR buffPayload %+v", err)
+	}
 
 	client := &http.Client{}
-	r, _ := http.NewRequest(http.MethodPost, endpoint, buffPayload)
+	r, _ := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(buffPayload))
 	r.Header.Set("Content-Type", "application/json")
 	r.Header.Set("BRI-Timestamp", timestamp)
 	r.Header.Set("BRI-Signature", signature)
@@ -311,7 +312,6 @@ func (bg *BRICredentials) GetVAStatusPayment(req ReqGetBRIVAStatusPayment) (resp
 	if err != nil {
 		return RawResponse{}, err
 	}
-	log.Printf("\npayload => %+v", payload)
 
 	signature, timestamp, err := bg.CreateSignature(payload)
 	log.Printf("\nsignature => %+v", signature)
@@ -319,13 +319,14 @@ func (bg *BRICredentials) GetVAStatusPayment(req ReqGetBRIVAStatusPayment) (resp
 	if err != nil {
 		log.Printf("ERROR buffPayload %+v", err)
 	}
-	log.Printf("\nbuffPayload => %+v", string(buffPayload))
 
 	client := &http.Client{}
 	r, _ := http.NewRequest(http.MethodGet, endpoint, bytes.NewReader(buffPayload)) // URL-encoded payload
 	r.Header.Add("Content-Type", "application/json")
 	r.Header.Add("BRI-Timestamp", timestamp)
 	r.Header.Add("BRI-Signature", signature)
+	bearerToken := "Bearer " + bg.Token
+	r.Header.Set("Authorization", bearerToken)
 
 	resp, err := client.Do(r)
 	if err != nil {
