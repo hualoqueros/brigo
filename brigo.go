@@ -64,14 +64,21 @@ type ResCreateBRIVA struct {
 	Data                ResCreateBRIVAData `json:"data"`
 }
 
+type ResCreateBRIVAError struct {
+	Status              bool               `json:"status"`
+	ResponseDescription string             `json:"errDesc"`
+	ResponseCode        string             `json:"responseCode"`
+	Data                ResCreateBRIVAData `json:"data"`
+}
+
 type ResCreateBRIVAData struct {
-	InstitutionCode string `json:"institutionCode"`
-	BrivaNo         string `json:"brivaNo"`
-	CustCode        string `json:"custCode"`
-	Nama            string `json:"nama"`
-	Amount          string `json:"amount"`
-	Keterangan      string `json:"keterangan"`
-	ExpiredDate     string `json:"expiredDate"`
+	InstitutionCode string  `json:"institutionCode"`
+	BrivaNo         int     `json:"brivaNo"`
+	CustCode        string  `json:"custCode"`
+	Nama            string  `json:"nama"`
+	Amount          float64 `json:"amount"`
+	Keterangan      string  `json:"keterangan"`
+	ExpiredDate     string  `json:"expiredDate"`
 }
 
 type ReqGetBRIVAStatusPayment struct {
@@ -104,6 +111,13 @@ type ErrorResponseData struct {
 	Description string `json:"desc"`
 }
 
+type CreateBRIVAResponse struct {
+	Status              bool               `json:"status"`
+	ResponseDescription string             `json:"responseDescription"`
+	ResponseCode        string             `json:"responseCode"`
+	Data                ResCreateBRIVAData `json:"data"`
+}
+
 func (d *RawResponse) UnmarshalJSON(data []byte) error {
 	var resp map[string]interface{}
 
@@ -112,14 +126,19 @@ func (d *RawResponse) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	if _, ok := resp["status"].(bool); ok {
+	if status, ok := resp["status"].(bool); ok && status == true {
 		if _, isGetStatusVAPayment := resp["data"].(map[string]interface{})["statusBayar"]; isGetStatusVAPayment {
 			d.Payload = new(ResGetBRIVAStatusPayment)
 		} else {
-			d.Payload = new(ResCreateBRIVAData)
+			d.Payload = new(ResCreateBRIVA)
 		}
 	} else {
-		d.Payload = new(ErrorResponse)
+		if _, errorDescription := resp["errDesc"].(string); errorDescription {
+			d.Payload = new(ResCreateBRIVAError)
+		} else {
+			d.Payload = new(ErrorResponse)
+		}
+
 	}
 	return json.Unmarshal(data, d.Payload)
 
@@ -169,7 +188,6 @@ func (bg *BRICredentials) CreateSignature(payload Payload) (signature string, ti
 		payload.Token,
 		payload.Timestamp,
 		payload.Body)
-	log.Printf("\nDATA PAYLOAD  CreateSignature => %+v", data)
 	// Get result and encode as hexadecimal string
 	signature = ComputeHmac256(data, secret)
 
@@ -202,86 +220,93 @@ func (bg *BRICredentials) ParseEndpoint(method string, endpoint string, bodyRequ
 	return
 }
 
-func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (response RawResponse, err error) {
+func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (result CreateBRIVAResponse, err error) {
+	var response RawResponse
 	endpoint := CreateVaURL.String()
-	log.Printf("\nendpoint => %+v", endpoint)
 	body, _ := json.Marshal(req)
 	if err != nil {
-		return RawResponse{}, err
+		return CreateBRIVAResponse{}, err
 	}
-	timeNow := time.Now()
+	timeNow := time.Now().UTC()
+	log.Printf("\ntimeNow => %+v", timeNow)
+
 	payload, err := bg.ParseEndpoint("POST", endpoint, string(body), timeNow)
 	if err != nil {
-		return RawResponse{}, err
+		return CreateBRIVAResponse{}, err
 	}
-	log.Printf("\npayload => %+v", payload)
 	signature, timestamp, err := bg.CreateSignature(payload)
 	if err != nil {
 		log.Printf("ERROR CreateSignature %+v", err)
 	}
-	log.Printf("\nToken => %+v", bg.Token)
-	log.Printf("\nsignature => %+v", signature)
-	log.Printf("\ntimestamp => %+v", timestamp)
-	buffPayload, err := json.Marshal(payload.Body)
-	if err != nil {
-		log.Printf("ERROR buffPayload %+v", err)
-	}
-	log.Printf("\nerr => %+v", err)
-
-	log.Printf("\nbuffPayload => %+v", string(buffPayload))
+	bd := []byte(payload.Body)
+	buffPayload := bytes.NewReader(bd)
 
 	client := &http.Client{}
-	r, _ := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(buffPayload)) // URL-encoded payload
-	r.Header.Add("Content-Type", "application/json")
-	r.Header.Add("BRI-Timestamp", timestamp)
-	r.Header.Add("BRI-Signature", signature)
+	r, _ := http.NewRequest(http.MethodPost, endpoint, buffPayload)
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("BRI-Timestamp", timestamp)
+	r.Header.Set("BRI-Signature", signature)
 	bearerToken := "Bearer " + bg.Token
-	r.Header.Add("Authorization", bearerToken)
-	log.Printf("\nRequest Raw=> %+v", r)
-	bodyPost, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Printf("ERROR REQUEST %+v", err)
-		return RawResponse{}, err
-	}
+	r.Header.Set("Authorization", bearerToken)
 
-	var rawPost interface{}
-	err = json.Unmarshal(bodyPost, &rawPost)
-	log.Printf("\nRequest Body=> %+v", rawPost)
+	// command, _ := http2curl.GetCurlCommand(r)
+	// fmt.Printf("CURL => %+v", command)
 
 	// HIT
 	resp, err := client.Do(r)
 	if err != nil {
 		log.Printf("ERROR REQUEST %+v", err)
-		return RawResponse{}, err
+		return CreateBRIVAResponse{}, err
 	}
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("ERROR ReadResponse %+v", err)
-		return RawResponse{}, err
+		return CreateBRIVAResponse{}, err
 	}
 
 	err = json.Unmarshal(bodyBytes, &response)
 	if err != nil {
 		log.Printf("ERROR Unmarshal %+v", err)
-		return RawResponse{}, err
+		return CreateBRIVAResponse{}, err
 	}
 
 	switch response.Payload.(type) {
 	case *ErrorResponse:
-		result := response.Payload.(*ErrorResponse)
-		err = errors.New(result.Status.Description)
-		return response, err
+		res := response.Payload.(*ErrorResponse)
+		result = CreateBRIVAResponse{
+			Status:              false,
+			ResponseDescription: res.Status.Description,
+			ResponseCode:        res.Status.Code,
+		}
+		err = errors.New(res.Status.Description)
+	case *ResCreateBRIVA:
+		log.Printf("SUCCESS => %+v", response)
+		res := response.Payload.(*ResCreateBRIVA)
+		result = CreateBRIVAResponse{
+			Status:              res.Status,
+			ResponseDescription: res.ResponseDescription,
+			ResponseCode:        res.ResponseCode,
+			Data:                res.Data,
+		}
+	case *ResCreateBRIVAError:
+		res := response.Payload.(*ResCreateBRIVAError)
+		result = CreateBRIVAResponse{
+			Status:              res.Status,
+			ResponseDescription: res.ResponseDescription,
+			ResponseCode:        res.ResponseCode,
+			Data:                res.Data,
+		}
 	}
 
-	return response, nil
+	return result, nil
 }
 
 func (bg *BRICredentials) GetVAStatusPayment(req ReqGetBRIVAStatusPayment) (response RawResponse, err error) {
 
 	endpoint := fmt.Sprintf(GetVAStatusPaymentURL.String(), req.InstitutionCode, req.BrivaNo, req.CustCode)
 	log.Printf("\nendpoint => %+v", endpoint)
-	timeNow := time.Now()
+	timeNow := time.Now().UTC()
 	payload, err := bg.ParseEndpoint("GET", endpoint, nil, timeNow)
 	if err != nil {
 		return RawResponse{}, err
