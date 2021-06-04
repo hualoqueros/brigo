@@ -105,7 +105,6 @@ func TestCreateVirtualAccount(t *testing.T) {
 	t.Logf("\nResult = %+v", response)
 }
 
-/**
 func TestGetVirtualAccountStatusPayment(t *testing.T) {
 
 	briConfig := BRIConfig{
@@ -122,7 +121,7 @@ func TestGetVirtualAccountStatusPayment(t *testing.T) {
 	reqGetBRIVAStatusPayment := ReqGetBRIVAStatusPayment{
 		InstitutionCode: "J104408",
 		BrivaNo:         77777,
-		CustCode:        "123456789115",
+		CustCode:        "441223176",
 	}
 
 	response, err := bri.GetVAStatusPayment(reqGetBRIVAStatusPayment)
@@ -133,4 +132,3 @@ func TestGetVirtualAccountStatusPayment(t *testing.T) {
 
 	t.Logf("\nSuccess = %+v", response.Payload)
 }
-**/
