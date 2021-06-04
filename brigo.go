@@ -190,6 +190,7 @@ func (bg *BRICredentials) CreateSignature(payload Payload) (signature string, ti
 		payload.Token,
 		payload.Timestamp,
 		payload.Body)
+	log.Println(data)
 	// Get result and encode as hexadecimal string
 	signature = ComputeHmac256(data, secret)
 
