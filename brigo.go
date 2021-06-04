@@ -230,7 +230,6 @@ func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (result CreateBRIVARes
 		return CreateBRIVAResponse{}, err
 	}
 	timeNow := time.Now().UTC()
-	log.Printf("\ntimeNow => %+v", timeNow)
 
 	payload, err := bg.ParseEndpoint("POST", endpoint, string(body), timeNow)
 	if err != nil {
@@ -313,7 +312,6 @@ func (bg *BRICredentials) GetVAStatusPayment(req ReqGetBRIVAStatusPayment) (resp
 	if err != nil {
 		return RawResponse{}, err
 	}
-	log.Printf("\npayload => %+v", payload)
 
 	signature, timestamp, err := bg.CreateSignature(payload)
 	if err != nil {

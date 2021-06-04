@@ -105,6 +105,7 @@ func TestCreateVirtualAccount(t *testing.T) {
 	t.Logf("\nResult = %+v", response)
 }
 
+/**
 func TestGetVirtualAccountStatusPayment(t *testing.T) {
 
 	briConfig := BRIConfig{
@@ -132,3 +133,5 @@ func TestGetVirtualAccountStatusPayment(t *testing.T) {
 
 	t.Logf("\nSuccess = %+v", response.Payload)
 }
+
+**/
