@@ -190,6 +190,7 @@ func (bg *BRICredentials) CreateSignature(payload Payload) (signature string, ti
 		payload.Token,
 		payload.Timestamp,
 		payload.Body)
+
 	// Get result and encode as hexadecimal string
 	signature = ComputeHmac256(data, secret)
 
@@ -322,7 +323,6 @@ func (bg *BRICredentials) GetVAStatusPayment(req ReqGetBRIVAStatusPayment) (resp
 
 	client := &http.Client{}
 	r, _ := http.NewRequest(http.MethodGet, endpoint, buffPayload) // URL-encoded payload
-	r.Header.Add("Content-Type", "application/json")
 	r.Header.Add("BRI-Timestamp", timestamp)
 	r.Header.Add("BRI-Signature", signature)
 	bearerToken := "Bearer " + bg.Token
