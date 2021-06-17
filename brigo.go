@@ -358,3 +358,87 @@ func (bg *BRICredentials) GetVAStatusPayment(req ReqGetBRIVAStatusPayment) (resp
 
 	return response, nil
 }
+
+func (bg *BRICredentials) FundTransferAccountValidation(sourceAccount string, beneficiaryAccount string) (response []byte, err error) {
+	url := "https://sandbox.partner.api.bri.co.id/v3/transfer/internal/accounts?sourceaccount=%s&beneficiaryaccount=%s"
+	endpoint := fmt.Sprintf(url, sourceAccount, beneficiaryAccount)
+	// log.Printf("\nendpoint => %+v", endpoint)
+	timeNow := time.Now().UTC()
+	payload, err := bg.ParseEndpoint("GET", endpoint, nil, timeNow)
+	if err != nil {
+		return
+	}
+
+	signature, timestamp, err := bg.CreateSignature(payload)
+	if err != nil {
+		log.Printf("ERROR buffPayload %+v", err)
+	}
+	bd := []byte(payload.Body)
+	buffPayload := bytes.NewReader(bd)
+
+	client := &http.Client{}
+	r, _ := http.NewRequest(http.MethodGet, endpoint, buffPayload) // URL-encoded payload
+	r.Header.Add("BRI-Timestamp", timestamp)
+	r.Header.Add("BRI-Signature", signature)
+	bearerToken := "Bearer " + bg.Token
+	r.Header.Set("Authorization", bearerToken)
+
+	// command, _ := http2curl.GetCurlCommand(r)
+	// fmt.Printf("CURL => %+v", command)
+
+	resp, err := client.Do(r)
+	if err != nil {
+		log.Printf("ERROR REQUEST %+v", err)
+		return
+	}
+
+	response, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("ERROR ReadResponse %+v", err)
+		return
+	}
+
+	return
+}
+
+func (bg *BRICredentials) FundTransferCheckStatus(noReferral string) (response []byte, err error) {
+	url := "https://sandbox.partner.api.bri.co.id/v3/transfer/internal?noreferral=%s"
+	endpoint := fmt.Sprintf(url, noReferral)
+	// log.Printf("\nendpoint => %+v", endpoint)
+	timeNow := time.Now().UTC()
+	payload, err := bg.ParseEndpoint("GET", endpoint, nil, timeNow)
+	if err != nil {
+		return
+	}
+
+	signature, timestamp, err := bg.CreateSignature(payload)
+	if err != nil {
+		log.Printf("ERROR buffPayload %+v", err)
+	}
+	bd := []byte(payload.Body)
+	buffPayload := bytes.NewReader(bd)
+
+	client := &http.Client{}
+	r, _ := http.NewRequest(http.MethodGet, endpoint, buffPayload) // URL-encoded payload
+	r.Header.Add("BRI-Timestamp", timestamp)
+	r.Header.Add("BRI-Signature", signature)
+	bearerToken := "Bearer " + bg.Token
+	r.Header.Set("Authorization", bearerToken)
+
+	// command, _ := http2curl.GetCurlCommand(r)
+	// fmt.Printf("CURL => %+v", command)
+
+	resp, err := client.Do(r)
+	if err != nil {
+		log.Printf("ERROR REQUEST %+v", err)
+		return
+	}
+
+	response, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("ERROR ReadResponse %+v", err)
+		return
+	}
+
+	return
+}
