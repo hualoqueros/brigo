@@ -120,6 +120,16 @@ type CreateBRIVAResponse struct {
 	Data                ResCreateBRIVAData `json:"data"`
 }
 
+type FundTransferInternalRequest struct {
+	Noreferral          string `json:"NoReferral"`
+	Sourceaccount       string `json:"sourceAccount"`
+	Beneficiaryaccount  string `json:"beneficiaryAccount"`
+	Amount              string `json:"amount"`
+	Feetype             string `json:"FeeType"`
+	Transactiondatetime string `json:"transactionDateTime"`
+	Remark              string `json:"remark"`
+}
+
 func (d *RawResponse) UnmarshalJSON(data []byte) error {
 	var resp map[string]interface{}
 
@@ -147,6 +157,7 @@ func (d *RawResponse) UnmarshalJSON(data []byte) error {
 }
 
 func InitBRI(config BRIConfig) (briCred *BRICredentials, err error) {
+
 	data := url.Values{}
 	data.Set("client_id", config.ConsumerKey)
 	data.Set("client_secret", config.ConsumerSecret)
@@ -184,6 +195,7 @@ func InitBRI(config BRIConfig) (briCred *BRICredentials, err error) {
 func (bg *BRICredentials) CreateSignature(payload Payload) (signature string, timestamp string, err error) {
 
 	secret := bg.Config.ConsumerSecret
+
 	data := fmt.Sprintf(`path=%s&verb=%s&token=%s&timestamp=%s&body=%s`,
 		payload.Path,
 		payload.Verb,
@@ -191,9 +203,12 @@ func (bg *BRICredentials) CreateSignature(payload Payload) (signature string, ti
 		payload.Timestamp,
 		payload.Body)
 
+	// fmt.Println(data)
+	// fmt.Println(secret)
 	// Get result and encode as hexadecimal string
 	signature = ComputeHmac256(data, secret)
 
+	// fmt.Println(signature)
 	return signature, payload.Timestamp, err
 }
 
@@ -424,6 +439,53 @@ func (bg *BRICredentials) FundTransferCheckStatus(noReferral string) (response [
 	r.Header.Add("BRI-Signature", signature)
 	bearerToken := "Bearer " + bg.Token
 	r.Header.Set("Authorization", bearerToken)
+
+	// command, _ := http2curl.GetCurlCommand(r)
+	// fmt.Printf("CURL => %+v", command)
+
+	resp, err := client.Do(r)
+	if err != nil {
+		log.Printf("ERROR REQUEST %+v", err)
+		return
+	}
+
+	response, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("ERROR ReadResponse %+v", err)
+		return
+	}
+
+	return
+}
+
+func (bg *BRICredentials) FundTransferInternal(req FundTransferInternalRequest) (response []byte, err error) {
+	url := "https://sandbox.partner.api.bri.co.id/v3/transfer/internal"
+	endpoint := fmt.Sprintf(url)
+	// log.Printf("\nendpoint => %+v", endpoint)
+	timeNow := time.Now().UTC()
+	body, _ := json.Marshal(req)
+	if err != nil {
+		return
+	}
+
+	payload, err := bg.ParseEndpoint("POST", endpoint, string(body), timeNow)
+	if err != nil {
+		return
+	}
+
+	signature, timestamp, err := bg.CreateSignature(payload)
+	if err != nil {
+		log.Printf("ERROR buffPayload %+v", err)
+	}
+	bd := []byte(payload.Body)
+	buffPayload := bytes.NewReader(bd)
+	client := &http.Client{}
+	r, _ := http.NewRequest(http.MethodPost, endpoint, buffPayload) // URL-encoded payload
+	r.Header.Add("BRI-Timestamp", timestamp)
+	r.Header.Add("BRI-Signature", signature)
+	bearerToken := "Bearer " + bg.Token
+	r.Header.Set("Authorization", bearerToken)
+	r.Header.Set("Content-Type", "application/json")
 
 	// command, _ := http2curl.GetCurlCommand(r)
 	// fmt.Printf("CURL => %+v", command)
