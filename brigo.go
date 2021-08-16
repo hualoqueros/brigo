@@ -555,7 +555,7 @@ func (bg *BRICredentials) FundTransferInternal(req FundTransferInternalRequest) 
 	return
 }
 
-func (bg *BRICredentials) FundTransferExternalInternal(req FundTransferExternalRequest) (response []byte, err error) {
+func (bg *BRICredentials) FundTransferExternal(req FundTransferExternalRequest) (response []byte, err error) {
 	url := "https://sandbox.partner.api.bri.co.id/v2/transfer/external"
 	endpoint := fmt.Sprintf(url)
 	// log.Printf("\nendpoint => %+v", endpoint)
