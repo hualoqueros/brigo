@@ -678,15 +678,9 @@ func (bg *BRICredentials) GetBankCode() (response []byte, err error) {
 		return
 	}
 
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	response, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("ERROR ReadResponse %+v", err)
-		return
-	}
-
-	err = json.Unmarshal(bodyBytes, &response)
-	if err != nil {
-		log.Printf("ERROR Unmarshal %+v", err)
 		return
 	}
 
