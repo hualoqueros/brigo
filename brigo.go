@@ -693,14 +693,14 @@ func (bg *BRICredentials) GetBankCode() (response []byte, err error) {
 	return response, nil
 }
 
-func (bg *BRICredentials) GetVAReportPayment(req ReqGetBRIVAReportPayment) (response RawResponse, err error) {
+func (bg *BRICredentials) GetVAReportPayment(req ReqGetBRIVAReportPayment) (response []byte, err error) {
 	url := "https://sandbox.partner.api.bri.co.id/v1/briva/report/%s/%d/%s/%s"
 	endpoint := fmt.Sprintf(url, req.InstitutionCode, req.BrivaNo, req.StartDate, req.EndDate)
 	// log.Printf("\nendpoint => %+v", endpoint)
 	timeNow := time.Now().UTC()
 	payload, err := bg.ParseEndpoint("GET", endpoint, nil, timeNow)
 	if err != nil {
-		return RawResponse{}, err
+		return response, err
 	}
 
 	signature, timestamp, err := bg.CreateSignature(payload)
@@ -723,27 +723,27 @@ func (bg *BRICredentials) GetVAReportPayment(req ReqGetBRIVAReportPayment) (resp
 	resp, err := client.Do(r)
 	if err != nil {
 		log.Printf("ERROR REQUEST %+v", err)
-		return RawResponse{}, err
-	}
-
-	bodyBytes, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Printf("ERROR ReadResponse %+v", err)
-		return RawResponse{}, err
-	}
-
-	err = json.Unmarshal(bodyBytes, &response)
-	if err != nil {
-		log.Printf("ERROR Unmarshal %+v", err)
-		return RawResponse{}, err
-	}
-
-	switch response.Payload.(type) {
-	case *ErrorResponse:
-		result := response.Payload.(*ErrorResponse)
-		err = errors.New(result.Status.Description)
 		return response, err
 	}
+
+	response, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("ERROR ReadResponse %+v", err)
+		return response, err
+	}
+
+	// err = json.Unmarshal(bodyBytes, &response)
+	// if err != nil {
+	// 	log.Printf("ERROR Unmarshal %+v", err)
+	// 	return RawResponse{}, err
+	// }
+
+	// switch response.Payload.(type) {
+	// case *ErrorResponse:
+	// 	result := response.Payload.(*ErrorResponse)
+	// 	err = errors.New(result.Status.Description)
+	// 	return response, err
+	// }
 
 	return response, nil
 }
