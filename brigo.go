@@ -88,6 +88,12 @@ type ReqGetBRIVAStatusPayment struct {
 	BrivaNo         int    `json:"brivaNo"`
 	CustCode        string `json:"custCode"`
 }
+type ReqGetBRIVAReportPayment struct {
+	InstitutionCode string `json:"institutionCode"`
+	BrivaNo         int    `json:"brivaNo"`
+	StartDate       string `json:"startDate"`
+	EndDate         string `json:"endDate"`
+}
 
 type ResGetBRIVAStatusPayment struct {
 	Status              bool                         `json:"status"`
@@ -682,6 +688,61 @@ func (bg *BRICredentials) GetBankCode() (response []byte, err error) {
 	if err != nil {
 		log.Printf("ERROR ReadResponse %+v", err)
 		return
+	}
+
+	return response, nil
+}
+
+func (bg *BRICredentials) GetVAReportPayment(req ReqGetBRIVAReportPayment) (response RawResponse, err error) {
+	url := "https://sandbox.partner.api.bri.co.id/v1/briva/report/%s/%s/%s/%s"
+	endpoint := fmt.Sprintf(url, req.InstitutionCode, req.BrivaNo, req.StartDate, req.EndDate)
+	// log.Printf("\nendpoint => %+v", endpoint)
+	timeNow := time.Now().UTC()
+	payload, err := bg.ParseEndpoint("GET", endpoint, nil, timeNow)
+	if err != nil {
+		return RawResponse{}, err
+	}
+
+	signature, timestamp, err := bg.CreateSignature(payload)
+	if err != nil {
+		log.Printf("ERROR buffPayload %+v", err)
+	}
+	bd := []byte(payload.Body)
+	buffPayload := bytes.NewReader(bd)
+
+	client := &http.Client{}
+	r, _ := http.NewRequest(http.MethodGet, endpoint, buffPayload) // URL-encoded payload
+	r.Header.Add("BRI-Timestamp", timestamp)
+	r.Header.Add("BRI-Signature", signature)
+	bearerToken := "Bearer " + bg.Token
+	r.Header.Set("Authorization", bearerToken)
+
+	// command, _ := http2curl.GetCurlCommand(r)
+	// fmt.Printf("CURL => %+v", command)
+
+	resp, err := client.Do(r)
+	if err != nil {
+		log.Printf("ERROR REQUEST %+v", err)
+		return RawResponse{}, err
+	}
+
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("ERROR ReadResponse %+v", err)
+		return RawResponse{}, err
+	}
+
+	err = json.Unmarshal(bodyBytes, &response)
+	if err != nil {
+		log.Printf("ERROR Unmarshal %+v", err)
+		return RawResponse{}, err
+	}
+
+	switch response.Payload.(type) {
+	case *ErrorResponse:
+		result := response.Payload.(*ErrorResponse)
+		err = errors.New(result.Status.Description)
+		return response, err
 	}
 
 	return response, nil
