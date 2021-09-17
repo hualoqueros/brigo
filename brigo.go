@@ -694,7 +694,7 @@ func (bg *BRICredentials) GetBankCode() (response []byte, err error) {
 }
 
 func (bg *BRICredentials) GetVAReportPayment(req ReqGetBRIVAReportPayment) (response RawResponse, err error) {
-	url := "https://sandbox.partner.api.bri.co.id/v1/briva/report/%s/%s/%s/%s"
+	url := "https://sandbox.partner.api.bri.co.id/v1/briva/report/%s/%d/%s/%s"
 	endpoint := fmt.Sprintf(url, req.InstitutionCode, req.BrivaNo, req.StartDate, req.EndDate)
 	// log.Printf("\nendpoint => %+v", endpoint)
 	timeNow := time.Now().UTC()
