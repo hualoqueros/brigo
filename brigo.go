@@ -28,12 +28,14 @@ const (
 )
 
 func (e EndPoint) String() string {
-	return [...]string{"https://sandbox.partner.api.bri.co.id/v1/briva", "https://sandbox.partner.api.bri.co.id/oauth/client_credential/accesstoken?grant_type=client_credentials", "https://sandbox.partner.api.bri.co.id/v1/briva/status/%s/%d/%s"}[e]
+	return [...]string{"/v1/briva", "/oauth/client_credential/accesstoken?grant_type=client_credentials", "/v1/briva/status/%s/%d/%s"}[e]
 }
 
 type BRIConfig struct {
 	ConsumerKey    string `json:"consumer_key"`
 	ConsumerSecret string `json:"consumer_secret"`
+	IsProd         bool   `json:"is_prod"`
+	BaseURL        string `json:"base_url"`
 }
 
 type BRICredentials struct {
@@ -177,6 +179,12 @@ func InitBRI(config BRIConfig) (briCred *BRICredentials, err error) {
 	data.Set("client_id", config.ConsumerKey)
 	data.Set("client_secret", config.ConsumerSecret)
 
+	if config.IsProd {
+		config.BaseURL = "https://partner.api.bri.co.id"
+	} else {
+		config.BaseURL = "https://sandbox.partner.api.bri.co.id"
+	}
+
 	// GET TOKEN
 	client := &http.Client{}
 	r, _ := http.NewRequest(http.MethodPost, CreateTokenURL.String(), strings.NewReader(data.Encode())) // URL-encoded payload
@@ -255,7 +263,7 @@ func (bg *BRICredentials) ParseEndpoint(method string, endpoint string, bodyRequ
 
 func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (result CreateBRIVAResponse, err error) {
 	var response RawResponse
-	endpoint := CreateVaURL.String()
+	endpoint := bg.Config.BaseURL + CreateVaURL.String()
 	body, _ := json.Marshal(req)
 	if err != nil {
 		return CreateBRIVAResponse{}, err
@@ -336,7 +344,7 @@ func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (result CreateBRIVARes
 
 func (bg *BRICredentials) GetVAStatusPayment(req ReqGetBRIVAStatusPayment) (response RawResponse, err error) {
 
-	endpoint := fmt.Sprintf(GetVAStatusPaymentURL.String(), req.InstitutionCode, req.BrivaNo, req.CustCode)
+	endpoint := fmt.Sprintf(bg.Config.BaseURL+GetVAStatusPaymentURL.String(), req.InstitutionCode, req.BrivaNo, req.CustCode)
 	// log.Printf("\nendpoint => %+v", endpoint)
 	timeNow := time.Now().UTC()
 	payload, err := bg.ParseEndpoint("GET", endpoint, nil, timeNow)
@@ -390,7 +398,7 @@ func (bg *BRICredentials) GetVAStatusPayment(req ReqGetBRIVAStatusPayment) (resp
 }
 
 func (bg *BRICredentials) FundTransferAccountValidation(sourceAccount string, beneficiaryAccount string) (response []byte, err error) {
-	url := "https://sandbox.partner.api.bri.co.id/v3/transfer/internal/accounts?sourceaccount=%s&beneficiaryaccount=%s"
+	url := bg.Config.BaseURL + "/v3/transfer/internal/accounts?sourceaccount=%s&beneficiaryaccount=%s"
 	endpoint := fmt.Sprintf(url, sourceAccount, beneficiaryAccount)
 	// log.Printf("\nendpoint => %+v", endpoint)
 	timeNow := time.Now().UTC()
@@ -432,7 +440,7 @@ func (bg *BRICredentials) FundTransferAccountValidation(sourceAccount string, be
 }
 
 func (bg *BRICredentials) FundTransferExternalAccountValidation(bankCode string, beneficiaryAccount string) (response []byte, err error) {
-	url := "https://sandbox.partner.api.bri.co.id/v2/transfer/external/accounts?bankcode=%s&beneficiaryaccount=%s"
+	url := bg.Config.BaseURL + "/v2/transfer/external/accounts?bankcode=%s&beneficiaryaccount=%s"
 	endpoint := fmt.Sprintf(url, bankCode, beneficiaryAccount)
 	// log.Printf("\nendpoint => %+v", endpoint)
 	timeNow := time.Now().UTC()
@@ -474,7 +482,7 @@ func (bg *BRICredentials) FundTransferExternalAccountValidation(bankCode string,
 }
 
 func (bg *BRICredentials) FundTransferCheckStatus(noReferral string) (response []byte, err error) {
-	url := "https://sandbox.partner.api.bri.co.id/v3/transfer/internal?noreferral=%s"
+	url := bg.Config.BaseURL + "/v3/transfer/internal?noreferral=%s"
 	endpoint := fmt.Sprintf(url, noReferral)
 	// log.Printf("\nendpoint => %+v", endpoint)
 	timeNow := time.Now().UTC()
@@ -516,7 +524,7 @@ func (bg *BRICredentials) FundTransferCheckStatus(noReferral string) (response [
 }
 
 func (bg *BRICredentials) FundTransfereExternalCheckStatus(noReferral string) (response []byte, err error) {
-	url := "https://sandbox.partner.api.bri.co.id/v3/transfer/external/accounts?noreferral=%s"
+	url := bg.Config.BaseURL + "/v3/transfer/external/accounts?noreferral=%s"
 	endpoint := fmt.Sprintf(url, noReferral)
 	// log.Printf("\nendpoint => %+v", endpoint)
 	timeNow := time.Now().UTC()
@@ -558,7 +566,7 @@ func (bg *BRICredentials) FundTransfereExternalCheckStatus(noReferral string) (r
 }
 
 func (bg *BRICredentials) FundTransferInternal(req FundTransferInternalRequest) (response []byte, err error) {
-	url := "https://sandbox.partner.api.bri.co.id/v3/transfer/internal"
+	url := bg.Config.BaseURL + "/v3/transfer/internal"
 	endpoint := fmt.Sprintf(url)
 	// log.Printf("\nendpoint => %+v", endpoint)
 	timeNow := time.Now().UTC()
@@ -605,7 +613,7 @@ func (bg *BRICredentials) FundTransferInternal(req FundTransferInternalRequest) 
 }
 
 func (bg *BRICredentials) FundTransferExternal(req FundTransferExternalRequest) (response []byte, err error) {
-	url := "https://sandbox.partner.api.bri.co.id/v2/transfer/external"
+	url := bg.Config.BaseURL + "/v2/transfer/external"
 	endpoint := fmt.Sprintf(url)
 	// log.Printf("\nendpoint => %+v", endpoint)
 	timeNow := time.Now().UTC()
@@ -653,7 +661,7 @@ func (bg *BRICredentials) FundTransferExternal(req FundTransferExternalRequest) 
 
 func (bg *BRICredentials) GetBankCode() (response []byte, err error) {
 
-	endpoint := fmt.Sprintf("https://sandbox.partner.api.bri.co.id/v2/transfer/external/accounts")
+	endpoint := fmt.Sprintf(bg.Config.BaseURL + "/v2/transfer/external/accounts")
 	// log.Printf("\nendpoint => %+v", endpoint)
 	timeNow := time.Now().UTC()
 	payload, err := bg.ParseEndpoint("GET", endpoint, nil, timeNow)
@@ -694,7 +702,7 @@ func (bg *BRICredentials) GetBankCode() (response []byte, err error) {
 }
 
 func (bg *BRICredentials) GetVAReportPayment(req ReqGetBRIVAReportPayment) (response []byte, err error) {
-	url := "https://sandbox.partner.api.bri.co.id/v1/briva/report/%s/%d/%s/%s"
+	url := bg.Config.BaseURL + "/v1/briva/report/%s/%d/%s/%s"
 	endpoint := fmt.Sprintf(url, req.InstitutionCode, req.BrivaNo, req.StartDate, req.EndDate)
 	// log.Printf("\nendpoint => %+v", endpoint)
 	timeNow := time.Now().UTC()
