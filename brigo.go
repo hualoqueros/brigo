@@ -187,11 +187,19 @@ func InitBRI(config BRIConfig) (briCred *BRICredentials, err error) {
 
 	// GET TOKEN
 	client := &http.Client{}
-	r, _ := http.NewRequest(http.MethodPost, CreateTokenURL.String(), strings.NewReader(data.Encode())) // URL-encoded payload
+	r, err := http.NewRequest(http.MethodPost, CreateTokenURL.String(), strings.NewReader(data.Encode())) // URL-encoded payload
+	if err != nil {
+		log.Printf("ERROR NewRequest %+v", err)
+		return &BRICredentials{}, err
+	}
 	r.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	r.Header.Add("Content-Length", strconv.Itoa(len(data.Encode())))
 
-	res, _ := client.Do(r)
+	res, err := client.Do(r)
+	if err != nil {
+		log.Printf("ERROR hit api %+v", err)
+		return &BRICredentials{}, err
+	}
 	if res.StatusCode >= 400 {
 		log.Printf("ERROR Get token %+v", err)
 		return &BRICredentials{}, err
