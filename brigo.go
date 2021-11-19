@@ -313,6 +313,8 @@ func (bg *BRICredentials) CreateBRIVA(req ReqCreateBRIVA) (result CreateBRIVARes
 		return CreateBRIVAResponse{}, err
 	}
 
+	fmt.Println(string(bodyBytes))
+
 	err = json.Unmarshal(bodyBytes, &response)
 	if err != nil {
 		log.Printf("ERROR Unmarshal %+v", err)
