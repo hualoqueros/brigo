@@ -187,7 +187,7 @@ func InitBRI(config BRIConfig) (briCred *BRICredentials, err error) {
 
 	// GET TOKEN
 	client := &http.Client{}
-	r, err := http.NewRequest(http.MethodPost, CreateTokenURL.String(), strings.NewReader(data.Encode())) // URL-encoded payload
+	r, err := http.NewRequest(http.MethodPost, config.BaseURL+CreateTokenURL.String(), strings.NewReader(data.Encode())) // URL-encoded payload
 	if err != nil {
 		log.Printf("ERROR NewRequest %+v", err)
 		return &BRICredentials{}, err
