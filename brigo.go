@@ -52,13 +52,13 @@ type Payload struct {
 }
 
 type ReqCreateBRIVA struct {
-	InstitutionCode string  `json:"institutionCode"`
-	BrivaNo         int     `json:"brivaNo"`
-	CustCode        string  `json:"custCode"`
-	Nama            string  `json:"nama"`
-	Amount          float64 `json:"amount"`
-	Keterangan      string  `json:"keterangan"`
-	ExpiredDate     string  `json:"expiredDate"`
+	InstitutionCode string `json:"institutionCode"`
+	BrivaNo         string `json:"brivaNo"`
+	CustCode        string `json:"custCode"`
+	Nama            string `json:"nama"`
+	Amount          string `json:"amount"`
+	Keterangan      string `json:"keterangan"`
+	ExpiredDate     string `json:"expiredDate"`
 }
 
 type ResCreateBRIVA struct {
